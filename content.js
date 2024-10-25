@@ -236,72 +236,103 @@
     const existingPrompt = document.querySelector('.pip-prompt');
     if (existingPrompt) return;
 
+    // Create overlay background
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.zIndex = '9998';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+
     const prompt = document.createElement('div');
     prompt.className = 'pip-prompt';
-    prompt.style.position = 'fixed';
-    prompt.style.top = '20px';
-    prompt.style.right = '20px';
-    prompt.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-    prompt.style.color = 'white';
-    prompt.style.padding = '15px';
-    prompt.style.borderRadius = '8px';
+    prompt.style.backgroundColor = 'white';
+    prompt.style.color = '#333';
+    prompt.style.padding = '24px';
+    prompt.style.borderRadius = '12px';
     prompt.style.zIndex = '9999';
     prompt.style.display = 'flex';
     prompt.style.flexDirection = 'column';
-    prompt.style.gap = '10px';
-    prompt.style.maxWidth = '300px';
+    prompt.style.gap = '20px';
+    prompt.style.width = '400px';
+    prompt.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
 
     const message = document.createElement('div');
+    message.style.fontSize = '16px';
+    message.style.lineHeight = '1.5';
+    message.style.textAlign = 'center';
     message.innerText = 'Would you like to enable automatic Picture-in-Picture when switching tabs?';
     prompt.appendChild(message);
 
     const buttonContainer = document.createElement('div');
     buttonContainer.style.display = 'flex';
-    buttonContainer.style.gap = '10px';
-    buttonContainer.style.justifyContent = 'flex-end';
+    buttonContainer.style.gap = '12px';
+    buttonContainer.style.justifyContent = 'center';
+
+    const buttonStyles = `
+        padding: 10px 24px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    `;
 
     const enableButton = document.createElement('button');
     enableButton.innerText = 'Enable';
-    enableButton.style.padding = '5px 15px';
+    enableButton.style.cssText = buttonStyles;
     enableButton.style.backgroundColor = '#2196F3';
-    enableButton.style.border = 'none';
-    enableButton.style.borderRadius = '4px';
     enableButton.style.color = 'white';
-    enableButton.style.cursor = 'pointer';
+    enableButton.style.marginLeft = '8px';
+    enableButton.addEventListener('mouseover', () => {
+        enableButton.style.backgroundColor = '#1976D2';
+    });
+    enableButton.addEventListener('mouseout', () => {
+        enableButton.style.backgroundColor = '#2196F3';
+    });
 
     const cancelButton = document.createElement('button');
     cancelButton.innerText = 'Not Now';
-    cancelButton.style.padding = '5px 15px';
-    cancelButton.style.backgroundColor = '#666';
-    cancelButton.style.border = 'none';
-    cancelButton.style.borderRadius = '4px';
-    cancelButton.style.color = 'white';
-    cancelButton.style.cursor = 'pointer';
+    cancelButton.style.cssText = buttonStyles;
+    cancelButton.style.backgroundColor = '#f5f5f5';
+    cancelButton.style.color = '#666';
+    cancelButton.addEventListener('mouseover', () => {
+        cancelButton.style.backgroundColor = '#e0e0e0';
+    });
+    cancelButton.addEventListener('mouseout', () => {
+        cancelButton.style.backgroundColor = '#f5f5f5';
+    });
 
     enableButton.addEventListener('click', async () => {
         hasUserInteracted = true;
         pipPermissionGranted = true;
-        // Store the permission
         await chrome.storage.local.set({ pipPermissionGranted: true });
         
         const video = await waitForVideo();
         if (video) {
-          const pipButton = document.getElementById('hidden-pip-button');
-          if (pipButton) {
-            pipButton.click(); // Simulate user click
-          }
+            const pipButton = document.getElementById('hidden-pip-button');
+            if (pipButton) {
+                pipButton.click();
+            }
         }
-        document.body.removeChild(prompt);
+        document.body.removeChild(overlay);
     });
 
     cancelButton.addEventListener('click', () => {
-        document.body.removeChild(prompt);
+        document.body.removeChild(overlay);
     });
 
     buttonContainer.appendChild(cancelButton);
     buttonContainer.appendChild(enableButton);
     prompt.appendChild(buttonContainer);
-    document.body.appendChild(prompt);
+    overlay.appendChild(prompt);
+    document.body.appendChild(overlay);
   }
 
   // Add observer for video element changes
