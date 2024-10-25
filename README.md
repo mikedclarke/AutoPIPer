@@ -6,6 +6,7 @@
 
 - **Automatic PIP Activation:** When you switch to a different tab while watching a YouTube video, the video automatically enters PIP mode.
 - **Automatic PIP Deactivation:** When you return to the YouTube tab, PIP mode is disabled, and the video resumes in the main tab.
+- **Limitations:** Due to browser security, once you return to the video and PIP is disabled. PIP wont auto activate again unless the user pauses then resumes the video first. This manual interaction is required to re-enable PIP. Auto PIP after loading a new video is uneffected.
 
 ## Installation
 
@@ -19,6 +20,7 @@
 - **tabs:** To monitor tab changes.
 - **scripting:** To inject scripts into web pages.
 - **activeTab:** To interact with the currently active tab.
+- **storage:** To save states.
 
 ## Privacy
 
