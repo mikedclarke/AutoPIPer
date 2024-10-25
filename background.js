@@ -8,16 +8,15 @@ function isYouTubeVideo(tab) {
   return tab.url && tab.url.startsWith("https://www.youtube.com/watch");
 }
 
-// Function to inject content script
+// Simplify the check for existing content script
 async function injectContentScript(tabId) {
   try {
-    // Check if content script is already injected
-    const results = await chrome.scripting.executeScript({
+    const [result] = await chrome.scripting.executeScript({
       target: { tabId },
-      func: () => window.hasOwnProperty('AutoPIPer_isInitialized')
+      func: () => window.AutoPIPer_isInitialized
     });
-    
-    if (results[0].result) {
+
+    if (result.result) {
       console.log('Content script already present in tab:', tabId);
       return;
     }
@@ -29,7 +28,7 @@ async function injectContentScript(tabId) {
     youtubeTabsMap.set(tabId, { hasContentScript: true });
     console.log('Content script injected into tab:', tabId);
   } catch (error) {
-    console.error('Failed to inject content script:', error);
+    console.error(`Failed to inject content script into tab ${tabId}:`, error);
   }
 }
 
@@ -46,39 +45,33 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   youtubeTabsMap.delete(tabId);
 });
 
-// Listen for tab activation changes
+// Optimize tab activation handling
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
-    try {
-        const activeTab = await chrome.tabs.get(activeInfo.tabId);
-        if (activeTab.url && activeTab.url.includes('youtube.com/watch')) {
-            // User returned to YouTube tab; disable PIP
-            if (youtubeTabsMap.has(activeTab.id)) {
-                try {
-                    await injectContentScript(activeTab.id);
-                    await chrome.tabs.sendMessage(activeTab.id, { action: 'disablePIP' });
-                } catch (error) {
-                    console.error(`Error sending disablePIP to tab ${activeTab.id}:`, error);
-                }
-            }
-        } else {
-            // User switched away from YouTube tab; enable PIP if previously active
-            const youtubeTabs = await chrome.tabs.query({ url: 'https://www.youtube.com/watch*' });
-            for (const tab of youtubeTabs) {
-                if (youtubeTabsMap.has(tab.id)) {
-                    try {
-                        await injectContentScript(tab.id);
-                        // Add a small delay to ensure the tab switch is complete
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        await chrome.tabs.sendMessage(tab.id, { action: 'enablePIP' });
-                    } catch (error) {
-                        console.error(`Error sending enablePIP to tab ${tab.id}:`, error);
-                    }
-                }
-            }
+  try {
+    const activeTab = await chrome.tabs.get(activeInfo.tabId);
+    const isYouTube = activeTab.url && activeTab.url.includes('youtube.com/watch');
+
+    if (isYouTube) {
+      // User returned to YouTube tab; disable PIP
+      if (youtubeTabsMap.has(activeTab.id)) {
+        await injectContentScript(activeTab.id);
+        await chrome.tabs.sendMessage(activeTab.id, { action: 'disablePIP' });
+      }
+    } else {
+      // User switched away from YouTube tab; enable PIP on all relevant tabs
+      const youtubeTabs = await chrome.tabs.query({ url: 'https://www.youtube.com/watch*' });
+      for (const tab of youtubeTabs) {
+        if (youtubeTabsMap.has(tab.id)) {
+          await injectContentScript(tab.id);
+          // Add a small delay to ensure the tab switch is complete
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await chrome.tabs.sendMessage(tab.id, { action: 'enablePIP' });
         }
-    } catch (error) {
-        console.error('Error handling tab activation:', error);
+      }
     }
+  } catch (error) {
+    console.error('Error handling tab activation:', error);
+  }
 });
 
 // Optionally, handle messages from content scripts to update youtubeTabsMap

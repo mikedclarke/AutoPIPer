@@ -46,6 +46,9 @@
     
     // Let the background script know we're ready
     chrome.runtime.sendMessage({ type: 'CONTENT_SCRIPT_READY' });
+
+    // Initialize observers
+    initializeObservers();
   }
 
   // Add this new function to handle video setup
@@ -81,21 +84,30 @@
     }
   }
 
-  // Message handler
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // Consolidate message handling
+  function handleMessage(request, sender, sendResponse) {
     console.log('Received message:', request.action);
-    
-    if (request.action === "enablePIP") {
-      enablePIP().then(() => sendResponse({ success: true }));
-    } else if (request.action === "disablePIP") {
-      disablePIP().then(() => sendResponse({ success: true }));
-    } else if (request.action === "promptPIP") {
-      showPIPPrompt();
-      sendResponse({ success: true });
+
+    switch (request.action) {
+      case 'enablePIP':
+        enablePIP().then(() => sendResponse({ success: true }));
+        break;
+      case 'disablePIP':
+        disablePIP().then(() => sendResponse({ success: true }));
+        break;
+      case 'promptPIP':
+        showPIPPrompt();
+        sendResponse({ success: true });
+        break;
+      default:
+        sendResponse({ success: false, message: 'Unknown action' });
     }
-    
+
     return true; // Keep the message channel open for async responses
-  });
+  }
+
+  // Register the consolidated message handler
+  chrome.runtime.onMessage.addListener(handleMessage);
 
   async function waitForVideo(maxAttempts = 10) {
     for (let i = 0; i < maxAttempts; i++) {
@@ -335,23 +347,28 @@
     document.body.appendChild(overlay);
   }
 
-  // Add observer for video element changes
+  // Optimize Mutation Observer for video elements
   const videoObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      mutation.addedNodes.forEach((node) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
         if (node.nodeName === 'VIDEO') {
           console.log('New video element detected');
-          setupVideoHandlers();
+          addPIPButton(node);
         }
-      });
-    });
+      }
+    }
   });
 
-  // Start observing after initialization
-  document.addEventListener('DOMContentLoaded', () => {
+  // Initialize observers only once
+  function initializeObservers() {
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
     videoObserver.observe(document.body, {
       childList: true,
       subtree: true
     });
-  });
+  }
 })();
