@@ -19,9 +19,8 @@
 ## Permissions
 
 - **tabs:** To monitor tab changes.
-- **scripting:** To inject scripts into web pages.
-- **activeTab:** To interact with the currently active tab.
-- **storage:** To save states.
+- **scripting:** To inject the plugin script into youtube.com/*.
+- **storage:** To save states for auto pip switching.
 
 ## Privacy
 
