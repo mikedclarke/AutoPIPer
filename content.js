@@ -24,9 +24,11 @@
     try {
       const result = await chrome.storage.local.get('pipPermissionGranted');
       pipPermissionGranted = result.pipPermissionGranted || false;
-      console.log('PIP permission status:', pipPermissionGranted);
+      console.log('PIP permission status loaded:', pipPermissionGranted);
+      return pipPermissionGranted;
     } catch (error) {
       console.error('Error checking PIP permission:', error);
+      return false;
     }
   }
 
@@ -38,29 +40,43 @@
     window.AutoPIPer_isInitialized = true;
     
     // Check stored permission first
-    checkStoredPIPPermission();
+    checkStoredPIPPermission().then(() => {
+      setupVideoHandlers();
+    });
     
     // Let the background script know we're ready
     chrome.runtime.sendMessage({ type: 'CONTENT_SCRIPT_READY' });
-    
-    // Add click listener to document to track user interaction
-    document.addEventListener('click', () => {
-      hasUserInteracted = true;
-    }, { once: true });
+  }
 
-    const video = document.querySelector('video');
+  // Add this new function to handle video setup
+  async function setupVideoHandlers() {
+    console.log('Setting up video handlers');
+    const video = await waitForVideo();
+    
     if (video) {
       // Create a hidden PIP button that we can programmatically click
-      const pipButton = document.createElement('button');
-      pipButton.id = 'hidden-pip-button';
-      pipButton.style.display = 'none';
-      document.body.appendChild(pipButton);
+      let pipButton = document.getElementById('hidden-pip-button');
+      if (!pipButton) {
+        pipButton = document.createElement('button');
+        pipButton.id = 'hidden-pip-button';
+        pipButton.style.display = 'none';
+        document.body.appendChild(pipButton);
+      }
+      
+      // Remove any existing click handlers
+      pipButton.replaceWith(pipButton.cloneNode(true));
+      pipButton = document.getElementById('hidden-pip-button');
       
       // Add click handler to the hidden button
       pipButton.addEventListener('click', () => {
         if (video && !document.pictureInPictureElement) {
           video.requestPictureInPicture().catch(console.error);
         }
+      });
+      
+      // Add video play handler
+      video.addEventListener('play', () => {
+        console.log('Video play event - PIP permission:', pipPermissionGranted);
       });
     }
   }
@@ -121,8 +137,11 @@
   }
 
   async function enablePIP(videoElement = null) {
+    // Recheck permission status before enabling PIP
+    await checkStoredPIPPermission();
+    
     if (!pipPermissionGranted) {
-      console.log('PIP permission not granted');
+      console.log('PIP permission not granted, showing prompt');
       showPIPPrompt();
       return;
     }
@@ -136,9 +155,17 @@
         }
         
         if (!document.pictureInPictureElement) {
+          console.log('Attempting to enable PIP');
           const pipButton = document.getElementById('hidden-pip-button');
           if (pipButton) {
             pipButton.click(); // Simulate user click
+          } else {
+            // If button doesn't exist, set up handlers again
+            await setupVideoHandlers();
+            const newPipButton = document.getElementById('hidden-pip-button');
+            if (newPipButton) {
+              newPipButton.click();
+            }
           }
         }
       } catch (error) {
@@ -276,4 +303,24 @@
     prompt.appendChild(buttonContainer);
     document.body.appendChild(prompt);
   }
+
+  // Add observer for video element changes
+  const videoObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeName === 'VIDEO') {
+          console.log('New video element detected');
+          setupVideoHandlers();
+        }
+      });
+    });
+  });
+
+  // Start observing after initialization
+  document.addEventListener('DOMContentLoaded', () => {
+    videoObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  });
 })();
