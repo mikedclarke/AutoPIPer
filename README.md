@@ -1,6 +1,6 @@
 # AutoPIPer
 
-**AutoPIPer** is a Chrome extension that automatically enables Picture-in-Picture (PIP) mode for YouTube videos when you switch away from the YouTube tab and disables PIP when you return to the YouTube tab.
+**AutoPIPer** is an Edge & Chrome extension that automatically enables Picture-in-Picture (PIP) mode for YouTube videos when you switch away from the YouTube tab and disables PIP when you return to the YouTube tab.
 
 ## Features
 
