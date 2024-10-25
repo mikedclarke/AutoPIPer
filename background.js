@@ -11,64 +11,26 @@ function isYouTubeVideo(tab) {
 // Listener for tab activation
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   const activeTab = await chrome.tabs.get(activeInfo.tabId);
+  const query = { url: "https://www.youtube.com/watch*" };
+  const youtubeTabs = await chrome.tabs.query(query);
   
   if (isYouTubeVideo(activeTab)) {
-    // User has returned to a YouTube tab
+    // User switched to YouTube tab - disable PIP
     if (currentYouTubeTabId) {
-      // Disable PIP on the previously pip-enabled tab
-      chrome.scripting.executeScript({
-        target: { tabId: currentYouTubeTabId },
-        func: disablePIP
-      });
+      chrome.tabs.sendMessage(currentYouTubeTabId, { action: "disablePIP" });
       currentYouTubeTabId = null;
     }
-  } else {
-    // User has switched away from YouTube
-    if (isYouTubeVideo(activeTab)) {
-      // If the active tab is YouTube, do nothing
-      return;
-    }
-    
-    // Find the active YouTube video tab
-    const query = { url: "https://www.youtube.com/watch*" };
-    const youtubeTabs = await chrome.tabs.query(query);
-    if (youtubeTabs.length > 0) {
-      const youtubeTab = youtubeTabs[0];
-      if (youtubeTab.id !== currentYouTubeTabId) {
-        // Enable PIP on the YouTube tab
-        chrome.scripting.executeScript({
-          target: { tabId: youtubeTab.id },
-          func: enablePIP
-        });
-        currentYouTubeTabId = youtubeTab.id;
-      }
-    }
+  } else if (youtubeTabs.length > 0) {
+    // User switched away from YouTube - enable PIP
+    const youtubeTab = youtubeTabs[0];
+    chrome.tabs.sendMessage(youtubeTab.id, { action: "enablePIP" });
+    currentYouTubeTabId = youtubeTab.id;
   }
 });
 
-// Listener for tab updates (e.g., URL changes)
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (isYouTubeVideo(tab) && changeInfo.status === 'complete') {
-    // If a YouTube video page is loaded, reset the currentYouTubeTabId
-    currentYouTubeTabId = tabId;
+// Reset tracking when YouTube tab is updated
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && isYouTubeVideo(tab)) {
+    currentYouTubeTabId = null;
   }
 });
-
-// Function to enable PIP
-function enablePIP() {
-  const video = document.querySelector('video');
-  if (video && document.pictureInPictureElement !== video) {
-    video.requestPictureInPicture().catch(error => {
-      console.error('Error entering Picture-in-Picture:', error);
-    });
-  }
-}
-
-// Function to disable PIP
-function disablePIP() {
-  if (document.pictureInPictureElement) {
-    document.exitPictureInPicture().catch(error => {
-      console.error('Error exiting Picture-in-Picture:', error);
-    });
-  }
-}

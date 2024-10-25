@@ -13,6 +13,9 @@
       "scripting",
       "activeTab"
     ],
+    "host_permissions": [
+      "https://www.youtube.com/*"
+    ],
     "background": {
       "service_worker": "background.js"
     },
