@@ -361,6 +361,29 @@
 
   // Initialize observers only once
   function initializeObservers() {
+    let observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeName === 'VIDEO') {
+            console.log('Video element found');
+            addPIPButton(node);
+          }
+        });
+      });
+    });
+
+    let videoObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeName === 'VIDEO') {
+            console.log('New video element detected');
+            addPIPButton(node);
+          }
+        }
+      }
+    });
+
+    // Start observing
     observer.observe(document.body, {
       childList: true,
       subtree: true
