@@ -29,4 +29,4 @@ AutoPIPer does not collect or store any user data. All operations are performed 
 
 ## License
 
-MIT License
+GPL
